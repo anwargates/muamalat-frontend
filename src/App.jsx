@@ -8,7 +8,7 @@ import Login from './pages/Login'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-
+import { toast } from 'react-toastify'
 
 function App() {
   const { agents, filterRole, setAgents, setFilterRole, isLogin, setIsLogin } =
@@ -46,12 +46,16 @@ function App() {
       })
       console.log('Login successful:', response.data)
       // Handle successful login (e.g., store authentication token in local storage)
-      localStorage.setItem('token', response.data.token)
+      localStorage.setItem('token', response?.data?.token)
       setIsLogin(true)
       navigate('/dashboard')
     } catch (error) {
-      console.error('Login failed:', error.response.data)
-      setError(error.response.data.message) // Assuming error message is in data.message
+      console.error(
+        'Login failed:',
+        error.response?.data?.message ?? error.message
+      )
+      // setError(error.response?.data?.message ?? error.response?.message)
+      toast.error(error.response?.data?.message ?? error.message) // Assuming error message is in data.message
       setIsLogin(false)
     }
   }

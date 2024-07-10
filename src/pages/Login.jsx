@@ -1,33 +1,82 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useAgentStore } from '../global/store'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import Toast from '../components/toasts/Toast'
+import { toast } from 'react-toastify'
 
 function Login() {
   const { isLogin, setIsLogin, setLoginName } = useAgentStore()
+
+  const initialError = {
+    email: '',
+    password: '',
+    name: '',
+  }
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [role, setRole] = useState('ADMIN')
-  const [error, setError] = useState('')
-  const [showToast, setShowToast] = useState(false)
+  const [error, setError] = useState(initialError)
   const [isLoginForm, setLoginForm] = useState(true)
+  const [profilePicture, setProfilePicture] = useState(null)
+
   const navigate = useNavigate()
 
-  const handleShowToast = () => {
-    setShowToast(true)
+  const handlePasswordChange = (e) => {
+    setPassword(e.target.value)
+    if (e.target.value.length < 5) {
+      setError((prevState) => ({
+        ...prevState,
+        password: 'Password must be at least 5 characters long.',
+      }))
+    } else {
+      setError((prevState) => ({
+        ...prevState,
+        password: '',
+      }))
+    }
+  }
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value)
+    if (e.target.value.length < 5) {
+      setError((prevState) => ({
+        ...prevState,
+        email: 'Email must be at least 5 characters long.',
+      }))
+    } else {
+      setError((prevState) => ({
+        ...prevState,
+        email: '',
+      }))
+    }
+  }
+
+  const handleNameChange = (e) => {
+    setName(e.target.value)
+    if (e.target.value.length < 5) {
+      setError((prevState) => ({
+        ...prevState,
+        name: 'Name must be at least 5 characters long.',
+      }))
+    } else {
+      setError((prevState) => ({
+        ...prevState,
+        name: '',
+      }))
+    }
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    setProfilePicture(file)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (password.length < 5) {
-      setError('Password must be at least 5 characters long.')
-      handleShowToast()
+    if (JSON.stringify(error) !== JSON.stringify(initialError)) {
       return
-    } else {
-      setError('')
     }
 
     let url = ''
@@ -37,30 +86,40 @@ function Login() {
       url = 'http://localhost:8191/auth/signup'
     }
 
+    const formData = new FormData()
+    formData.append('email', email)
+    formData.append('password', password)
+    formData.append('name', name)
+    formData.append('role', role)
+    formData.append('profilePicture', profilePicture)
+
     try {
-      const response = await axios.post(url, {
-        email,
-        password,
-        name,
-        role,
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       })
       console.log('Login successful:', response.data)
       // Handle successful login (e.g., store authentication token in local storage)
-      localStorage.setItem('token', response.data.token)
+      localStorage.setItem('token', response.data?.token)
       setLoginName(response.data.name)
       setIsLogin(true)
+      toast.success('Login successful')
       navigate('/dashboard')
     } catch (error) {
-      console.error('Login failed:', error.response.data)
-      handleShowToast()
-      setError(error.response.data.message) // Assuming error message is in data.message
+      console.error('Login failed:', error)
+      // setError(error.response?.data?.message || error.response?.message) // Assuming error message is in data.message
+      // handleShowToast()
+      toast.error(error.response?.data?.message ?? error.message)
       setIsLogin(false)
     }
   }
 
-  useEffect(() => {
-    console.log(error)
-  }, [error])
+  // useEffect(() => {
+  //   console.log(error)
+  //   console.log(initialError)
+  //   console.log(JSON.stringify(error) !== JSON.stringify(initialError))
+  // }, [error])
 
   return (
     <>
@@ -78,7 +137,7 @@ function Login() {
                   type='email'
                   placeholder='Email'
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleEmailChange(e)}
                   className='px-2 py-1 rounded-sm rounded-tr-none rounded-br-none text-black'
                   required
                 />
@@ -86,7 +145,7 @@ function Login() {
                   type='password'
                   placeholder='Password'
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e)}
                   className='px-2 py-1 rounded-sm rounded-tr-none rounded-br-none text-black'
                   required
                 />
@@ -94,6 +153,12 @@ function Login() {
                   type='submit'
                   className='bg-[#3edeed] text-white px-2 py-1 rounded-sm rounded-tl-none rounded-bl-none'>
                   Sign In
+                </button>
+                <button
+                  type='submit'
+                  onClick={() => setLoginForm(!isLoginForm)}
+                  className='bg-[#b6ed3e] text-white px-2 py-1 rounded-sm rounded-tl-none rounded-bl-none'>
+                  Sign Up
                 </button>
               </form>
             ) : (
@@ -104,7 +169,7 @@ function Login() {
                   type='email'
                   placeholder='Email'
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleEmailChange(e)}
                   className='px-2 py-1 rounded-sm rounded-tr-none rounded-br-none text-black'
                   required
                 />
@@ -112,7 +177,7 @@ function Login() {
                   type='password'
                   placeholder='Password'
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => handlePasswordChange(e)}
                   className='px-2 py-1 rounded-sm rounded-tr-none rounded-br-none text-black'
                   required
                 />
@@ -120,27 +185,33 @@ function Login() {
                   type='name'
                   placeholder='Name'
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => handleNameChange(e)}
                   className='px-2 py-1 rounded-sm rounded-tr-none rounded-br-none text-black'
                   required
+                />
+                <input
+                  type='file'
+                  onChange={(e) => handleFileChange(e)}
+                  className='text-black'
+                  accept='image/*'
                 />
                 <button
                   type='submit'
                   className='bg-[#3edeed] text-white px-2 py-1 rounded-sm rounded-tl-none rounded-bl-none'>
                   Sign Up
                 </button>
+                <button
+                  type='submit'
+                  onClick={() => setLoginForm(!isLoginForm)}
+                  className='bg-[#b6ed3e] text-white px-2 py-1 rounded-sm rounded-tl-none rounded-bl-none'>
+                  Sign In
+                </button>
               </form>
             )}
-            <button
-              type='submit'
-              onClick={() => setLoginForm(!isLoginForm)}
-              className='bg-[#b6ed3e] text-white px-2 py-1 rounded-sm rounded-tl-none rounded-bl-none'>
-              Switch
-            </button>
           </div>
         </div>
       </section>
-      {showToast && <Toast message={error} />}
+      {/* {showToast && <Toast message={error} />} */}
     </>
   )
 }
